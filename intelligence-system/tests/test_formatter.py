@@ -59,7 +59,7 @@ class TestTruncate:
 
     def test_truncated_ends_with_suffix(self):
         result = _truncate("a" * 100, 20)
-        assert result.endswith("…")
+        assert result.endswith("...")
 
     def test_exact_length_unchanged(self):
         s = "a" * 10

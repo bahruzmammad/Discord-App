@@ -175,31 +175,39 @@ def build_digest(rss: List[dict], reddit: List[dict]) -> str:
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
-        f"**🛰️ OSINT Intelligence System — Live Test Digest**",
-        f"*{now}*\n",
-        f"📡 **RSS feeds fetched:** {len(rss)} articles from {len(TEST_FEEDS)} sources",
-        f"🤖 **Reddit posts fetched:** {len(reddit)} posts from {len(TEST_SUBREDDITS)} subreddits\n",
+        f"OSINT Intelligence System: Live Test Digest",
+        f"{now}",
+        "",
+        f"RSS feeds fetched: {len(rss)} articles from {len(TEST_FEEDS)} sources",
+        f"Reddit posts fetched: {len(reddit)} posts from {len(TEST_SUBREDDITS)} subreddits",
+        "",
     ]
 
     # Top 5 RSS items
-    lines.append("**📰 Top Headlines (RSS)**")
+    lines.append("Top Headlines (RSS)")
     for i, a in enumerate(rss[:5], 1):
-        title = a["title"][:90] + ("…" if len(a["title"]) > 90 else "")
-        lines.append(f"{i}. [{title}]({a['url']}) — *{a['source']}*")
+        title = a["title"][:90] + ("..." if len(a["title"]) > 90 else "")
+        lines.append(f"{i}. {title}")
+        lines.append(f"   Source: {a['source']}")
+        lines.append(f"   URL: {a['url']}")
 
     lines.append("")
 
     # Top 5 Reddit posts by score
     sorted_reddit = sorted(reddit, key=lambda x: x.get("score", 0), reverse=True)
-    lines.append("**🔥 Top Reddit Posts**")
-    for i, a in enumerate(sorted_reddit[:5], 1):
-        title = a["title"][:90] + ("…" if len(a["title"]) > 90 else "")
-        lines.append(f"{i}. [{title}]({a['url']}) — *{a['source']}*")
+    if sorted_reddit:
+        lines.append("Top Reddit Posts")
+        for i, a in enumerate(sorted_reddit[:5], 1):
+            title = a["title"][:90] + ("..." if len(a["title"]) > 90 else "")
+            lines.append(f"{i}. {title}")
+            lines.append(f"   Source: {a['source']}")
+            lines.append(f"   URL: {a['url']}")
+        lines.append("")
 
-    lines.append(f"\n*All data from public sources only · No API keys used*")
+    lines.append("All data from public sources. No API keys used.")
 
     digest = "\n".join(lines)
-    ok(f"Digest built — {len(digest)} chars, {len(digest.splitlines())} lines")
+    ok(f"Digest built: {len(digest)} chars, {len(digest.splitlines())} lines")
     return digest
 
 
