@@ -1,0 +1,46 @@
+# ============================================================
+# OSINT Intelligence System — Python Dependencies
+# ============================================================
+# Install with: pip install -r requirements.txt
+# Python 3.10+ required.
+
+# ── Discord ──────────────────────────────────────────────────
+discord.py>=2.3.2,<3.0.0        # Discord API client (async)
+
+# ── Async HTTP ───────────────────────────────────────────────
+aiohttp>=3.9.0,<4.0.0           # Async HTTP client/server
+aiohttp-retry>=2.8.3            # Retry logic for aiohttp
+
+# ── Scheduling ───────────────────────────────────────────────
+APScheduler>=3.10.4,<4.0.0      # Background job scheduler (asyncio mode)
+
+# ── Configuration ────────────────────────────────────────────
+python-dotenv>=1.0.0            # Load .env files into environment
+
+# ── Data Validation ──────────────────────────────────────────
+# (Using stdlib dataclasses — no Pydantic required)
+
+# ── RSS / XML ────────────────────────────────────────────────
+# (Using stdlib xml.etree.ElementTree — no feedparser required)
+
+# ── Rich Console Logging ─────────────────────────────────────
+rich>=13.7.0                    # Rich console output & RichHandler
+
+# ── Testing ──────────────────────────────────────────────────
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# ── Optional: Enhanced HTML parsing (for news scraping) ──────
+# Uncomment if you add scrapy-style providers:
+# beautifulsoup4>=4.12.0
+# lxml>=5.1.0
+
+# ── Optional: NewsAPI.org ─────────────────────────────────────
+# No extra package needed — uses aiohttp to call the API.
+# Set NEWS_API_KEY in .env to activate this source.
+
+# ── Optional: Sentence similarity (for better clustering) ─────
+# Uncomment for ML-based clustering (requires ~1GB memory):
+# sentence-transformers>=2.6.0
+# torch>=2.2.0

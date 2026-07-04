@@ -1,0 +1,41 @@
+[Unit]
+Description=OSINT Intelligence System — Automated Discord digest bot
+Documentation=https://github.com/YOUR_USERNAME/osint-intelligence
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Change to the user that owns the project
+User=osintbot
+Group=osintbot
+
+# Path to the project directory
+WorkingDirectory=/home/osintbot/osint-intelligence
+
+# Command to run (using the venv Python)
+ExecStart=/home/osintbot/osint-intelligence/venv/bin/python main.py
+
+# Restart on failure with 30-second delay
+Restart=on-failure
+RestartSec=30s
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=osint-intelligence
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/osintbot/osint-intelligence/logs
+
+# Load environment from .env file
+EnvironmentFile=/home/osintbot/osint-intelligence/.env
+
+[Install]
+WantedBy=multi-user.target
