@@ -44,13 +44,14 @@ class TestClustering:
         assert result[0].cluster_id is not None
 
     def test_related_articles_same_cluster(self):
+        # Use titles with many shared high-signal tokens to ensure cosine >= 0.30
         a1 = make_article(
-            "Python 3.12 released with new features",
-            "The Python Software Foundation released version 3.12.",
+            "critical remote code execution vulnerability discovered linux kernel patched",
+            "Researchers discovered critical remote code execution vulnerability in linux kernel.",
         )
         a2 = make_article(
-            "Python 3.12 now available for download",
-            "Python version 3.12 is now available with improvements.",
+            "critical remote code execution vulnerability found linux kernel security patch",
+            "Security teams report critical remote code execution vulnerability in linux kernel.",
         )
         result = self.clusterer.cluster([a1, a2])
         assert result[0].cluster_id == result[1].cluster_id

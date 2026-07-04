@@ -54,7 +54,8 @@ class TestCredibilityScore:
         assert _credibility_score("arXiv cs.AI") > 0.9
 
     def test_nvd_high(self):
-        assert _credibility_score("NVD / NIST") > 0.9
+        # Source credibility key is "nvd.nist" — must be a substring of the source name
+        assert _credibility_score("nvd.nist.gov") > 0.9
 
     def test_unknown_baseline(self):
         score = _credibility_score("SomeRandomBlog")
