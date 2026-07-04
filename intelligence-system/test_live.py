@@ -131,11 +131,12 @@ async def fetch_reddit() -> List[dict]:
     t0 = time.monotonic()
 
     async def _fetch_sub(sub: str, label: str) -> List[dict]:
+        # Reddit requires a descriptive User-Agent or returns 403
         data = await fetch_json(
             f"https://www.reddit.com/r/{sub}/hot.json",
             params={"limit": "10"},
-            user_agent="OSINTDigestBot/1.0",
-            timeout=10,
+            user_agent="python:osint-digest-bot:v1.0 (by /u/osintdigestbot)",
+            timeout=15,
             retries=2,
         )
         if not data:
@@ -272,9 +273,24 @@ class _TestBot:
             await client.close()
             ready.set()
 
+        import discord as _discord
+
+        login_error: Exception | None = None
+
+        async def _start_with_error_capture():
+            nonlocal login_error
+            try:
+                await client.start(self.token)
+            except _discord.LoginFailure as e:
+                login_error = e
+                ready.set()   # unblock the wait immediately
+            except Exception as e:
+                login_error = e
+                ready.set()
+
         try:
             async with client:
-                start = asyncio.create_task(client.start(self.token))
+                start = asyncio.create_task(_start_with_error_capture())
                 try:
                     await asyncio.wait_for(ready.wait(), timeout=45)
                 except asyncio.TimeoutError:
@@ -286,9 +302,19 @@ class _TestBot:
                             await asyncio.wait_for(start, timeout=5)
                         except (asyncio.CancelledError, asyncio.TimeoutError):
                             pass
+
+            if login_error is not None:
+                if "Improper token" in str(login_error) or "LoginFailure" in type(login_error).__name__:
+                    fail("Discord token is invalid or expired.")
+                    print(f"\n  {YELLOW}Fix:{RESET} Go to discord.com/developers/applications")
+                    print(f"       → your app → Bot → {BOLD}Reset Token{RESET}")
+                    print(f"       Then update the DISCORD_BOT_TOKEN secret in Replit.\n")
+                else:
+                    fail(f"Discord error: {login_error}")
+                sys.exit(1)
         except Exception as e:
-            fail(f"Discord error: {e}")
-            raise
+            fail(f"Discord connection error: {e}")
+            sys.exit(1)
 
     def _discover(self, client) -> object | None:
         import discord
