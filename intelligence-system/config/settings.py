@@ -1,6 +1,9 @@
 """
 Configuration management — reads from environment variables / .env file.
-All settings have sensible defaults so the system runs without any API keys.
+
+Only one environment variable is required: DISCORD_BOT_TOKEN.
+All other settings have sensible defaults; no other API keys or credentials
+are used anywhere in the system.
 """
 
 from __future__ import annotations
@@ -39,15 +42,6 @@ def _env_list(key: str, default: str = "") -> List[str]:
 @dataclass
 class DiscordConfig:
     token: str = field(default_factory=lambda: _env("DISCORD_BOT_TOKEN"))
-    digest_channel_id: int = field(
-        default_factory=lambda: _env_int("DISCORD_DIGEST_CHANNEL_ID", 0)
-    )
-    alert_channel_id: int = field(
-        default_factory=lambda: _env_int(
-            "DISCORD_ALERT_CHANNEL_ID",
-            _env_int("DISCORD_DIGEST_CHANNEL_ID", 0),
-        )
-    )
     # Digest delivery time in HH:MM (UTC)
     digest_time: str = field(default_factory=lambda: _env("DIGEST_TIME_UTC", "08:00"))
     # Interval in hours for trending alerts (0 = disabled)
@@ -118,10 +112,6 @@ class Settings:
             raise ValueError(
                 "DISCORD_BOT_TOKEN is required unless DRY_RUN=true. "
                 "Copy .env.example to .env and fill in your token."
-            )
-        if not self.dry_run and not self.discord.digest_channel_id:
-            raise ValueError(
-                "DISCORD_DIGEST_CHANNEL_ID is required unless DRY_RUN=true."
             )
 
 

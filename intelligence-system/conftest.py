@@ -7,10 +7,10 @@ import pytest
 # Ensure the project root is on sys.path so all imports resolve
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Set minimal environment for tests (avoids config validation errors)
+# Set minimal environment for tests (avoids config validation errors).
+# Only DISCORD_BOT_TOKEN is needed — no other credentials required.
 os.environ.setdefault("DRY_RUN", "true")
 os.environ.setdefault("DISCORD_BOT_TOKEN", "test_token")
-os.environ.setdefault("DISCORD_DIGEST_CHANNEL_ID", "123456789")
 
 
 def pytest_configure(config):

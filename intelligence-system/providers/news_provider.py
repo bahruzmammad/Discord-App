@@ -1,16 +1,13 @@
 """
-News provider — uses public NewsAPI-compatible endpoints and additional
-curated RSS feeds for global tech and science news.
+News provider — curated public RSS feeds for global tech and science news.
 
+All sources are fully public and require no API keys or authentication.
 Falls back gracefully if any source is unreachable.
-No API key is required for the RSS-only sources.
-Optional: set NEWS_API_KEY for the newsapi.org source.
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -20,7 +17,7 @@ from typing import List, Optional, Tuple
 from config.settings import settings
 from models.article import Article, Category, utcnow
 from providers.base import BaseProvider
-from utils.http_client import fetch_json, fetch_text
+from utils.http_client import fetch_text
 
 
 def _parse_date(raw: Optional[str]) -> datetime:
@@ -44,7 +41,7 @@ def _strip_tags(text: str) -> str:
     return re.sub(r"\s+", " ", clean).strip()[:500]
 
 
-# RSS feeds exclusively for news (no API key needed)
+# RSS feeds exclusively for news (all public, no API key needed)
 NEWS_RSS_FEEDS: List[Tuple[str, Category, str]] = [
     ("https://feeds.bbci.co.uk/news/technology/rss.xml", Category.TECH_NEWS, "BBC Tech"),
     ("https://rss.cnn.com/rss/edition_technology.rss", Category.TECH_NEWS, "CNN Tech"),
@@ -118,52 +115,11 @@ class NewsProvider(BaseProvider):
             return []
         return _parse_rss_feed(text, category, source)
 
-    async def _fetch_newsapi(self) -> List[Article]:
-        """Optional NewsAPI.org source — only runs if NEWS_API_KEY is set."""
-        api_key = os.environ.get("NEWS_API_KEY", "").strip()
-        if not api_key:
-            return []
-
-        data = await fetch_json(
-            "https://newsapi.org/v2/top-headlines",
-            params={
-                "category": "technology",
-                "language": "en",
-                "pageSize": 20,
-                "apiKey": api_key,
-            },
-            user_agent=settings.collector.user_agent,
-            timeout=settings.collector.http_timeout,
-        )
-        if not data or data.get("status") != "ok":
-            return []
-
-        articles: List[Article] = []
-        for item in data.get("articles", []):
-            title = (item.get("title") or "").strip()
-            url = (item.get("url") or "").strip()
-            if not title or not url or title == "[Removed]":
-                continue
-            articles.append(
-                Article(
-                    title=title,
-                    url=url,
-                    source=item.get("source", {}).get("name", "NewsAPI"),
-                    category=Category.TECH_NEWS,
-                    timestamp=_parse_date(item.get("publishedAt")),
-                    summary=(item.get("description") or "")[:400] or None,
-                    provider="news",
-                )
-            )
-
-        return articles
-
     async def fetch(self) -> List[Article]:
         tasks = [
             asyncio.create_task(self._fetch_rss(url, cat, src))
             for url, cat, src in NEWS_RSS_FEEDS
         ]
-        tasks.append(asyncio.create_task(self._fetch_newsapi()))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
         articles: List[Article] = []

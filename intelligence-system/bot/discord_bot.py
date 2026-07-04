@@ -3,9 +3,17 @@ Discord bot layer.
 
 Handles:
 - Connection and readiness
-- Sending digest embeds to a channel
+- Auto-discovery of the digest channel by name (no channel ID required)
+- Sending digest embeds to that channel
 - Sending trending alerts
 - Graceful shutdown
+
+Channel discovery order (case-insensitive):
+  1. "intelligence-digest"
+  2. "osint-digest"
+  3. "osint"
+  4. "general"
+  5. First writable text channel in the first guild
 """
 
 from __future__ import annotations
@@ -23,7 +31,6 @@ from bot.formatter import (
     build_section_embeds,
     build_trending_alert,
 )
-from config.settings import settings
 from core.digest import DigestReport
 from models.article import Article
 
@@ -32,6 +39,9 @@ logger = logging.getLogger(__name__)
 # Delay between embed sends to avoid Discord rate-limits (seconds)
 _INTER_EMBED_DELAY = 0.6
 _INTER_SECTION_DELAY = 1.2
+
+# Channel names tried in order when auto-discovering
+_CHANNEL_NAMES = ["intelligence-digest", "osint-digest", "osint", "general"]
 
 
 def _make_embed(data: dict) -> discord.Embed:
@@ -61,6 +71,44 @@ class IntelligenceBot(commands.Bot):
         intents.message_content = False  # No message reading needed
         super().__init__(command_prefix="!", intents=intents)
         self._ready_event = asyncio.Event()
+        self._digest_channel: Optional[discord.TextChannel] = None
+
+    # ------------------------------------------------------------------
+    # Channel discovery
+    # ------------------------------------------------------------------
+
+    def _find_channel_in_guild(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
+        """Return the best writable text channel in *guild*."""
+        me = guild.me
+
+        def can_write(ch: discord.TextChannel) -> bool:
+            perms = ch.permissions_for(me)
+            return perms.send_messages and perms.embed_links
+
+        # Try preferred names first
+        for name in _CHANNEL_NAMES:
+            for ch in guild.text_channels:
+                if ch.name.lower() == name and can_write(ch):
+                    return ch
+
+        # Fall back to any writable text channel
+        for ch in guild.text_channels:
+            if can_write(ch):
+                return ch
+
+        return None
+
+    def _discover_digest_channel(self) -> Optional[discord.TextChannel]:
+        """Walk all guilds and return the first suitable channel found."""
+        for guild in self.guilds:
+            ch = self._find_channel_in_guild(guild)
+            if ch is not None:
+                return ch
+        return None
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     async def on_ready(self) -> None:
         logger.info("Discord bot ready — logged in as %s (ID: %s)", self.user, self.user.id)
@@ -70,6 +118,20 @@ class IntelligenceBot(commands.Bot):
                 name="the intelligence feed",
             )
         )
+        self._digest_channel = self._discover_digest_channel()
+        if self._digest_channel:
+            logger.info(
+                "Digest channel auto-selected: #%s in '%s'",
+                self._digest_channel.name,
+                self._digest_channel.guild.name,
+            )
+        else:
+            logger.warning(
+                "No writable text channel found — bot is in %d guild(s). "
+                "Create a channel named 'intelligence-digest' and reinvite the bot "
+                "with Send Messages + Embed Links permissions.",
+                len(self.guilds),
+            )
         self._ready_event.set()
 
     async def wait_until_ready_custom(self, timeout: float = 30.0) -> bool:
@@ -81,29 +143,25 @@ class IntelligenceBot(commands.Bot):
             logger.error("Timed out waiting for Discord bot to become ready")
             return False
 
+    # ------------------------------------------------------------------
+    # Delivery
+    # ------------------------------------------------------------------
+
     async def send_digest(self, report: DigestReport) -> bool:
         """
-        Send the full intelligence digest to the configured digest channel.
+        Send the full intelligence digest to the auto-discovered digest channel.
 
         Returns True on success, False on failure.
         """
-        channel_id = settings.discord.digest_channel_id
-        channel = self.get_channel(channel_id)
+        channel = self._digest_channel
         if channel is None:
-            try:
-                channel = await self.fetch_channel(channel_id)
-            except discord.NotFound:
-                logger.error("Digest channel %d not found", channel_id)
-                return False
-            except discord.Forbidden:
-                logger.error("No permission to access digest channel %d", channel_id)
-                return False
-
-        if not isinstance(channel, discord.TextChannel):
-            logger.error("Channel %d is not a text channel", channel_id)
+            logger.error(
+                "No digest channel available — cannot deliver digest. "
+                "Ensure the bot has been invited to a server with a writable text channel."
+            )
             return False
 
-        logger.info("Sending digest to #%s (%d)", channel.name, channel_id)
+        logger.info("Sending digest to #%s (%s)", channel.name, channel.guild.name)
 
         try:
             # 1. Header
@@ -138,15 +196,11 @@ class IntelligenceBot(commands.Bot):
             return False
 
     async def send_alert(self, articles: List[Article], top_n: int = 5) -> bool:
-        """Send a trending alert to the alert channel."""
-        channel_id = settings.discord.alert_channel_id
-        channel = self.get_channel(channel_id)
+        """Send a trending alert to the digest channel."""
+        channel = self._digest_channel
         if channel is None:
-            try:
-                channel = await self.fetch_channel(channel_id)
-            except Exception as exc:
-                logger.error("Cannot fetch alert channel %d: %s", channel_id, exc)
-                return False
+            logger.error("No channel available for trending alert")
+            return False
 
         embeds_data = build_trending_alert(articles, top_n=top_n)
         try:

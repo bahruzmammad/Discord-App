@@ -55,9 +55,9 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 8. Configure environment
+# 8. Configure environment — only one value required
 cp .env.example .env
-nano .env   # Fill in DISCORD_BOT_TOKEN and DISCORD_DIGEST_CHANNEL_ID
+nano .env   # Set DISCORD_BOT_TOKEN — nothing else needed
 
 # 9. Test with dry run
 DRY_RUN=true python main.py
@@ -103,7 +103,7 @@ pip install -r requirements.txt
 
 # 4. Configure
 cp .env.example .env
-nano .env
+nano .env  # Set DISCORD_BOT_TOKEN — only credential needed
 
 # 5. Test
 DRY_RUN=true python main.py

@@ -36,10 +36,6 @@ pytest-cov>=4.1.0
 # beautifulsoup4>=4.12.0
 # lxml>=5.1.0
 
-# ── Optional: NewsAPI.org ─────────────────────────────────────
-# No extra package needed — uses aiohttp to call the API.
-# Set NEWS_API_KEY in .env to activate this source.
-
 # ── Optional: Sentence similarity (for better clustering) ─────
 # Uncomment for ML-based clustering (requires ~1GB memory):
 # sentence-transformers>=2.6.0

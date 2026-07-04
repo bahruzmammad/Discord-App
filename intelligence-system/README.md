@@ -50,7 +50,7 @@ intelligence-system/
 │   ├── github_provider.py     # GitHub Trending + Search API
 │   ├── reddit_provider.py     # 28 public subreddits
 │   ├── security_provider.py   # NVD, CISA KEV, GHSA, security RSS
-│   └── news_provider.py       # News RSS + optional NewsAPI.org
+│   └── news_provider.py       # News RSS (15 public feeds, no API key)
 ├── core/                      # Processing engine
 │   ├── aggregator.py          # Orchestrates all providers (async)
 │   ├── deduplicator.py        # URL fingerprint + fuzzy title matching
@@ -122,14 +122,13 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and fill in the two required values:
+Edit `.env` and fill in the **one required value**:
 
 ```env
 DISCORD_BOT_TOKEN=your_bot_token_here
-DISCORD_DIGEST_CHANNEL_ID=your_channel_id_here
 ```
 
-Everything else has sensible defaults. See [Configuration](#configuration) for all options.
+That's it. No channel IDs, no API keys, nothing else. The bot automatically selects the best channel to post to when it connects. Everything else has sensible defaults — see [Configuration](#configuration) for optional tuning.
 
 ### 3. Test with dry run (no Discord needed)
 
@@ -163,9 +162,7 @@ All configuration is via environment variables (set in `.env`).
 
 | Variable | Default | Description |
 |---|---|---|
-| `DISCORD_BOT_TOKEN` | *(required)* | Your Discord bot token |
-| `DISCORD_DIGEST_CHANNEL_ID` | *(required)* | Channel ID for daily digest |
-| `DISCORD_ALERT_CHANNEL_ID` | Digest channel | Channel ID for trending alerts |
+| `DISCORD_BOT_TOKEN` | **required** | Your Discord bot token — the only credential needed |
 | `DIGEST_TIME_UTC` | `08:00` | Daily digest delivery time (HH:MM UTC) |
 | `ALERT_INTERVAL_HOURS` | `0` | Trending alert interval in hours (0 = disabled) |
 | `MAX_ITEMS_PER_PROVIDER` | `50` | Max articles collected per provider |
@@ -174,7 +171,6 @@ All configuration is via environment variables (set in `.env`).
 | `DEDUP_THRESHOLD` | `0.75` | Fuzzy-match threshold for deduplication |
 | `HTTP_TIMEOUT` | `20` | HTTP request timeout in seconds |
 | `EXTRA_RSS_FEEDS` | *(empty)* | Comma-separated extra RSS URLs |
-| `NEWS_API_KEY` | *(empty)* | Optional NewsAPI.org key |
 | `LOG_LEVEL` | `INFO` | DEBUG / INFO / WARNING / ERROR |
 | `LOG_FORMAT` | `rich` | `rich` / `json` / `plain` |
 | `LOG_FILE` | *(empty)* | Optional log file path |
@@ -187,13 +183,14 @@ All configuration is via environment variables (set in `.env`).
 
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Click **New Application** → name it "OSINT Intelligence"
-3. Go to **Bot** → **Add Bot** → copy the **Token**
-4. Under **Privileged Gateway Intents**, enable **Message Content Intent** (optional)
-5. Go to **OAuth2 → URL Generator**:
+3. Go to **Bot** → **Reset Token** → copy the **Token**
+4. Go to **OAuth2 → URL Generator**:
    - Scopes: `bot`
    - Bot Permissions: `Send Messages`, `Embed Links`, `Read Message History`
-6. Open the generated URL → invite the bot to your server
-7. Right-click your target channel → **Copy Channel ID** (requires Developer Mode in Discord settings)
+5. Open the generated URL → invite the bot to your server
+6. Put `DISCORD_BOT_TOKEN=<your token>` in `.env` — that's everything
+
+**Channel auto-selection:** on startup the bot looks for a text channel named `intelligence-digest` → `osint-digest` → `osint` → `general` → first writable channel, in that order. Create a channel named `intelligence-digest` in your server to control where digests land.
 
 ---
 
